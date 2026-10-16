@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PDF Search Engine</title>
+  <style>
+    /* ======== MINIMALIST CSS RESET ======== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      background-color: #ffffff; 
+      color: #111111;
+      line-height: 1.6;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    
+    h1, h2 { font-weight: 600; letter-spacing: -0.5px; }
+    
+    /* ======== LOGIN UI ======== */
+    #login-container { 
+      width: 100%;
+      max-width: 340px; 
+      margin: 15vh auto 0 auto; 
+      text-align: center;
+      animation: fadeIn 0.5s ease;
+    }
+    
+    #login-container h2 { font-size: 26px; margin-bottom: 8px; }
+    #login-container p { color: #666666; font-size: 15px; margin-bottom: 35px; }
+
+    .input-group { margin-bottom: 25px; }
+    .input-group input {
+      width: 100%;
+      padding: 15px 0;
+      background: transparent;
+      border: none;
+      border-bottom: 1.5px solid #dddddd; 
+      font-size: 16px;
+      color: #111;
+      transition: border-color 0.3s;
+      outline: none;
+      text-align: center;
+      border-radius: 0; 
+    }
+    .input-group input:focus { border-bottom: 1.5px solid #111111; }
+
+    button.btn {
+      width: 100%;
+      padding: 16px;
+      background-color: #111111; 
+      color: #ffffff;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      border-radius: 4px; 
+    }
+    button.btn:hover { opacity: 0.8; }
+    button.btn:disabled { background-color: #cccccc; cursor: not-allowed; }
+    
+    #error-msg { color: #d93025; margin-top: 15px; font-size: 14px; min-height: 20px; font-weight: 500; }
+
+    /* ======== SEARCH & DATA VIEWER ======== */
+    #data-container {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+    
+    .header-section { text-align: center; margin-bottom: 30px; }
+    .header-section h1 { font-size: 28px; margin-bottom: 10px; }
+    
+    /* Prominent Search Bar */
+    .search-container { margin-bottom: 30px; width: 100%; position: relative; }
+    .search-container input {
+      width: 100%;
+      padding: 16px 20px;
+      background: #fafafa;
+      border: 1px solid #eeeeee;
+      font-size: 16px;
+      color: #111;
+      transition: all 0.3s;
+      outline: none;
+      border-radius: 8px;
+    }
+    .search-container input:focus { border-color: #111111; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    
+    /* ======== TABLE ======== */
+    .table-responsive {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 8px;
+      border: 1px solid #eeeeee; 
+    }
+    
+    table { border-collapse: collapse; width: 100%; font-size: 15px; }
+    th, td { border-bottom: 1px solid #eeeeee; padding: 18px 16px; text-align: left; white-space: nowrap; }
+    th { color: #111111; font-weight: 600; text-transform: uppercase; font-size: 12px; letter-spacing: 0.5px; border-bottom: 2px solid #111111; background-color: #ffffff; }
+    td { color: #444444; }
+    
+    tbody tr:nth-child(even) { background-color: #fafafa; }
+    tbody tr:hover { background-color: #f0f0f0; }
+    tr:last-child td { border-bottom: none; }
+    
+    /* PDF Links Styling */
+    a.doc-link { 
+      color: #111111; 
+      text-decoration: none; 
+      font-weight: 600; 
+      border-bottom: 1px solid #111111;
+      padding-bottom: 2px;
+    }
+    a.doc-link:hover { color: #666666; border-bottom-color: #666666; }
+    
+    .no-results { text-align: center; padding: 30px; color: #888; display: none; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ======== MOBILE RESPONSIVE ======== */
+    @media (max-width: 600px) {
+      body { padding: 25px 15px; } 
+      #login-container { margin-top: 10vh; }
+      .header-section h1 { font-size: 24px; }
+      th, td { padding: 14px 12px; font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Login Section -->
+  <div id="login-container">
+    <h2>PDF Directory</h2>
+    <p>Enter the master password to access files</p>
+    
+    <div class="input-group">
+      <input type="password" id="password-input" placeholder="Password">
+    </div>
+    <button class="btn" onclick="fetchData()">Unlock</button>
+    <div id="error-msg"></div>
+  </div>
+
+  <!-- Data Section -->
+  <div id="data-container">
+    <div class="header-section">
+      <h1>PDF Search Engine</h1>
+    </div>
+    
+    <!-- Search Bar -->
+    <div class="search-container">
+      <input type="text" id="search-input" placeholder="Search by Keywords, Date, or Name..." onkeyup="searchPDFs()">
+    </div>
+    
+    <div id="table-container"></div>
+    <div id="no-results-msg" class="no-results">No matching PDFs found.</div>
+  </div>
+
+  <script>
+    // 👇 PASTE YOUR NEW GOOGLE APPS SCRIPT URL HERE 👇
+    const googleApiUrl = "https://script.google.com/macros/s/AKfycbwh2lfV4ALQl7DDvBxWvfQ1feJ48iKJdd-GYiAMKd2coA2rLFEh4I7mXILI0NRdfz-4/exec"; 
+    
+    function fetchData() {
+      const pwd = document.getElementById('password-input').value;
+      const errorMsg = document.getElementById('error-msg');
+      const loginBtn = document.querySelector('.btn');
+      
+      if (!pwd) {
+        errorMsg.textContent = "Password is required.";
+        return;
+      }
+
+      errorMsg.textContent = "Connecting...";
+      errorMsg.style.color = "#111111";
+      loginBtn.disabled = true;
+      loginBtn.textContent = "LOADING...";
+      
+      const payload = { pwd: pwd, timestamp: new Date().getTime() };
+
+      fetch(googleApiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.json())
+      .then(dataObj => {
+        loginBtn.disabled = false;
+        loginBtn.textContent = "UNLOCK";
+
+        if (dataObj.error) {
+          errorMsg.style.color = "#d93025";
+          errorMsg.textContent = dataObj.error; 
+        } else {
+          document.getElementById('login-container').style.display = 'none';
+          document.getElementById('data-container').style.display = 'block';
+          buildTable(dataObj);
+        }
+      })
+      .catch(error => {
+        loginBtn.disabled = false;
+        loginBtn.textContent = "UNLOCK";
+        errorMsg.style.color = "#d93025";
+        errorMsg.textContent = "Connection failed.";
+      });
+    }
+
+    document.getElementById('password-input').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') { fetchData(); }
+    });
+
+    function buildTable(rows) {
+      const container = document.getElementById('table-container');
+      if (rows.length === 0) return;
+
+      const tableWrapper = document.createElement('div');
+      tableWrapper.className = 'table-responsive';
+
+      const table = document.createElement('table');
+      table.id = "pdf-table";
+      const thead = document.createElement('thead');
+      const tbody = document.createElement('tbody');
+
+      // Create Headers (Row 0 from Google Sheets)
+      const headers = rows[0];
+      const trHead = document.createElement('tr');
+      headers.forEach(headerObj => {
+        const th = document.createElement('th');
+        th.textContent = headerObj.text;
+        trHead.appendChild(th);
+      });
+      thead.appendChild(trHead);
+
+      // Create Data Rows
+      for (let i = 1; i < rows.length; i++) {
+        const tr = document.createElement('tr');
+        rows[i].forEach(cellObj => {
+          const td = document.createElement('td');
+          let linkUrl = cellObj.link;
+          if (!linkUrl && cellObj.text.startsWith('http')) linkUrl = cellObj.text; 
+
+          if (linkUrl) {
+            td.innerHTML = `<a class="doc-link" href="${linkUrl}" target="_blank">${cellObj.text}</a>`;
+          } else {
+            td.textContent = cellObj.text;
+          }
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      }
+      
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      tableWrapper.appendChild(table);
+      container.appendChild(tableWrapper);
+    }
+
+    // Live Search Function
+    function searchPDFs() {
+      const input = document.getElementById("search-input");
+      const filter = input.value.toLowerCase();
+      const table = document.getElementById("pdf-table");
+      const noResultsMsg = document.getElementById("no-results-msg");
+      let visibleCount = 0;
+
+      if (!table) return;
+      const trs = table.getElementsByTagName("tr");
+      
+      // Loop through all table rows (excluding the header row)
+      for (let j = 1; j < trs.length; j++) {
+        const tds = trs[j].getElementsByTagName("td");
+        let rowMatches = false;
+        
+        for (let k = 0; k < tds.length; k++) {
+          if (tds[k]) {
+            const cellText = tds[k].textContent || tds[k].innerText;
+            if (cellText.toLowerCase().indexOf(filter) > -1) {
+              rowMatches = true;
+              break; 
+            }
+          }
+        }
+        
+        if (rowMatches) {
+          trs[j].style.display = "";
+          visibleCount++;
+        } else {
+          trs[j].style.display = "none";
+        }
+      }
+      
+      // Show "No Results" message if nothing matches
+      noResultsMsg.style.display = (visibleCount === 0 && filter !== "") ? "block" : "none";
+    }
+  </script>
+</body>
+</html>
